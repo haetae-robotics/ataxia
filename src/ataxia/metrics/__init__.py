@@ -6,11 +6,13 @@ from .instruments import (
     ActionRepetitionEntropy,
     BeliefPersistenceRate,
     CollisionCount,
+    DockEscalation,
     InitiationCollapse,
     NoProgressRate,
     RegionDetectionDelta,
     TaskSuccess,
     TimeToCompleteRatio,
+    TravelOverhead,
     compute_all,
 )
 from .scales import SCALES, SymptomScale
@@ -21,6 +23,7 @@ __all__ = [
     "ActionRepetitionEntropy",
     "BeliefPersistenceRate",
     "CollisionCount",
+    "DockEscalation",
     "InitiationCollapse",
     "Metric",
     "MetricContext",
@@ -30,5 +33,6 @@ __all__ = [
     "SymptomScale",
     "TaskSuccess",
     "TimeToCompleteRatio",
+    "TravelOverhead",
     "compute_all",
 ]

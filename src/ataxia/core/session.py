@@ -5,7 +5,7 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass, field
 
-from .models import PseudoBotWorld, ScriptedPolicy
+from .models import PseudoBotWorld, ScriptedPolicy, WorldPos
 from .types import ActionParams, Episode, LayerEvent, ObsPacket, StepRecord
 
 
@@ -15,6 +15,8 @@ class EpisodeState:
 
     profile: str
     rng: random.Random
+    policy: ScriptedPolicy | None = None
+    pos: WorldPos = (4, 4)
     step_index: int = 0
     failures: int = 0
     contradictions: int = 0
@@ -61,7 +63,12 @@ class EpisodeSession:
     def run(self, seed: int) -> Episode:
         self.world.reset()
         self.policy = ScriptedPolicy(seed)
-        state = EpisodeState(profile=self.profile.key, rng=random.Random(seed ^ 0xA7A7))
+        state = EpisodeState(
+            profile=self.profile.key,
+            rng=random.Random(seed ^ 0xA7A7),
+            policy=self.policy,
+            pos=self.world.start,
+        )
 
         steps: list[StepRecord] = []
         for i in range(self.world.length):
@@ -83,6 +90,7 @@ class EpisodeSession:
 
             outcome = self.world.step(action)
 
+            state.pos = outcome.pos
             if outcome.bumped or outcome.failed_collect:
                 state.failures += 1
             state.steps_since_collect += 1

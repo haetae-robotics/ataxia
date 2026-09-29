@@ -9,9 +9,12 @@ from ataxia.core.models import PseudoBotWorld, ScriptedPolicy
 from ataxia.core.session import EpisodeSession, EpisodeState
 from ataxia.core.types import ActionParams, Cell, ObsPacket
 from ataxia.layers import (
+    BeliefPinLayer,
+    DockFixationLayer,
     HelplessnessLayer,
     NeglectLayer,
     PerseverationLayer,
+    PhantomLayer,
 )
 from ataxia.profiles import get_profile
 
@@ -96,3 +99,75 @@ class TestSessionIntegration(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestM2Layers(unittest.TestCase):
+    def test_phantom_layer_injects_empty_target(self) -> None:
+        layer = PhantomLayer(
+            targets=PseudoBotWorld.targets,
+            decoys=PseudoBotWorld.decoys,
+            obstacles=PseudoBotWorld.obstacles,
+            size=PseudoBotWorld.size,
+            prob=1.0,
+            radius=3,
+        )
+        state = EpisodeState(profile="test", rng=random.Random(2), pos=(4, 4))
+        obs = ObsPacket(x=4, y=4, cells=[])
+        out = layer.on_observation(state, obs)
+        self.assertEqual(len(out.cells), 1)
+        c = out.cells[0]
+        self.assertEqual(c.kind, "target")
+        self.assertNotIn(
+            (c.x, c.y),
+            set(PseudoBotWorld.targets) | set(PseudoBotWorld.decoys) | set(PseudoBotWorld.obstacles),
+        )
+        self.assertGreaterEqual(abs(c.x - 4) + abs(c.y - 4), 1)
+        self.assertLessEqual(abs(c.x - 4) + abs(c.y - 4), 3)
+
+    def test_belief_pin_layer_sets_policy_pinned_once(self) -> None:
+        policy = ScriptedPolicy(seed=1)
+        layer = BeliefPinLayer(pin_cell=(7, 3))
+        state = EpisodeState(profile="test", rng=random.Random(0), policy=policy)
+        obs = ObsPacket(x=4, y=4, cells=[])
+        layer.on_observation(state, obs)
+        self.assertIn((7, 3), policy.pinned)
+        layer.on_observation(state, obs)  # second call: still pinned once
+        self.assertEqual(len(policy.pinned), 1)
+
+    def test_policy_holds_pinned_belief_against_evidence(self) -> None:
+        policy = ScriptedPolicy(seed=1)
+        state = EpisodeState(profile="test", rng=random.Random(0), policy=policy)
+        policy.pinned.add((7, 3))
+        policy.belief[(7, 3)] = "target"  # a prior decision-cycle pinned it
+        obs = ObsPacket(x=7, y=3, cells=[Cell(7, 3, "decoy")])
+        policy.decide(obs, ActionParams(), state)
+        # the pinned belief overrides the decoy evidence and is re-asserted
+        self.assertEqual(policy.belief[(7, 3)], "target")
+        kinds = [e.kind for e in state.events]
+        self.assertIn("belief.persisted", kinds)
+        self.assertNotIn("belief.contradiction", kinds)
+
+    def test_unpinned_belief_is_corrected(self) -> None:
+        policy = ScriptedPolicy(seed=1)
+        state = EpisodeState(profile="test", rng=random.Random(0), policy=policy)
+        policy.belief[(7, 3)] = "target"
+        obs = ObsPacket(x=7, y=3, cells=[Cell(7, 3, "decoy")])
+        policy.decide(obs, ActionParams(), state)
+        self.assertEqual(policy.belief[(7, 3)], "decoy")
+        self.assertIn("belief.contradiction", [e.kind for e in state.events])
+
+    def test_dock_fixation_steers_to_dock(self) -> None:
+        layer = DockFixationLayer(dock=(4, 4), base=1.0, slope=0.0, max_prob=1.0)
+        state = EpisodeState(profile="test", rng=random.Random(1), pos=(0, 4))
+        out = layer.on_action(state, "up")
+        self.assertIn(out, ("right", "left"))  # moving toward dock column
+        state2 = EpisodeState(profile="test", rng=random.Random(0), pos=(4, 4))
+        self.assertEqual(layer.on_action(state2, "up"), "wait")  # at dock: stay
+
+    def test_dock_fixation_prob_escalates(self) -> None:
+        layer = DockFixationLayer(dock=(4, 4), base=0.025, slope=0.075, max_prob=1.0)
+        state = EpisodeState(profile="test", rng=random.Random(1), pos=(0, 0))
+        state.step_index = 5
+        layer.on_action(state, "up")
+        details = [e.detail for e in state.events if e.kind == "dock.fixation"]
+        self.assertTrue(any(d.startswith("p=0.40") for d in details))

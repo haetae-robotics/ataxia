@@ -64,4 +64,28 @@ SCALES: dict[str, SymptomScale] = {
         dsm_note="maps to hemispatial neglect (one side of space systematically unattended)",
         mechanism_note="right-hemifield observations masked; right targets never enter the belief grid",
     ),
+    "phantom_scale": SymptomScale(
+        name="phantom_scale",
+        metric="travel_overhead",
+        direction="higher",
+        thresholds=(10.0, 13.0, 16.0),
+        dsm_note="proxies phantom-object perception (acting toward things that are not there)",
+        mechanism_note="empty cells injected as targets; the policy walks to them and collects nothing",
+    ),
+    "belief_persistence": SymptomScale(
+        name="belief_persistence",
+        metric="belief_persistence_rate",
+        direction="higher",
+        thresholds=(0.15, 0.35, 0.60),
+        dsm_note="proxies delusion-like belief maintenance (belief held against contradicting sensors)",
+        mechanism_note="a decoy cell stays pinned as target; evidence re-overridden every step",
+    ),
+    "dock_scale": SymptomScale(
+        name="dock_scale",
+        metric="dock_escalation",
+        direction="higher",
+        thresholds=(0.05, 0.15, 0.30),
+        dsm_note="proxies compulsive return behavior with an escalating schedule (craving analog)",
+        mechanism_note="probability of steering to the dock rises linearly across the episode",
+    ),
 }

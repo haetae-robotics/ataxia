@@ -1,4 +1,4 @@
-"""Unit tests for the eight episode-level instruments."""
+"""Unit tests for the eleven episode-level instruments."""
 
 from __future__ import annotations
 
@@ -10,12 +10,14 @@ from ataxia.metrics.instruments import (
     ActionRepetitionEntropy,
     BeliefPersistenceRate,
     CollisionCount,
+    DockEscalation,
     FailedCollectRate,
     InitiationCollapse,
     NoProgressRate,
     RegionDetectionDelta,
     TaskSuccess,
     TimeToCompleteRatio,
+    TravelOverhead,
     compute_all,
 )
 
@@ -91,7 +93,7 @@ class TestInstruments(unittest.TestCase):
         value = FailedCollectRate().compute(ep, MetricContext())
         self.assertAlmostEqual(value.value, 0.5)
 
-    def test_compute_all_nine_present(self) -> None:
+    def test_compute_all_eleven_present(self) -> None:
         ep = make_episode(["up"] * 6)
         values = compute_all(ep, MetricContext())
         self.assertEqual(
@@ -106,8 +108,36 @@ class TestInstruments(unittest.TestCase):
                 "task_success",
                 "time_to_complete_ratio",
                 "belief_persistence_rate",
+                "travel_overhead",
+                "dock_escalation",
             },
         )
+
+
+class TestM2Instruments(unittest.TestCase):
+    def test_travel_overhead_moves_per_collect(self) -> None:
+        ep = make_episode(["up", "down", "up", "down"], collected_left=2, collected_right=0)
+        value = TravelOverhead().compute(ep, MetricContext())
+        self.assertAlmostEqual(value.value, 2.0)
+
+    def test_dock_escalation_uses_positions(self) -> None:
+        ep = make_episode(["wait"] * 20)
+        for s in ep.steps:
+            s.pos = (4, 4)
+        value = DockEscalation().compute(ep, MetricContext())
+        self.assertAlmostEqual(value.value, 0.0)  # dock in both halves: no shift
+
+    def test_belief_persistence_uses_events(self) -> None:
+        from ataxia.core.types import LayerEvent
+
+        events = [
+            [LayerEvent(0, "policy.belief", "belief.persisted", "a")],
+            [LayerEvent(1, "policy.belief", "belief.persisted", "b")],
+            [LayerEvent(2, "policy.belief", "belief.contradiction", "c")],
+        ]
+        ep = make_episode(["up"] * 3, events=events)
+        value = BeliefPersistenceRate().compute(ep, MetricContext())
+        self.assertAlmostEqual(value.value, 2 / 3)
 
 
 if __name__ == "__main__":

@@ -122,6 +122,48 @@ class RegionDetectionDelta(Metric):
         )
 
 
+class TravelOverhead(Metric):
+    """Movement attempts per target actually collected — travel spent per
+    unit of progress. The phantom-object signature: walks to empty cells
+    inflate the ratio while success drops. Direction: higher is
+    pathological."""
+
+    name = "travel_overhead"
+    description = "movement attempts per collected target"
+
+    def compute(self, episode: Episode, ctx: MetricContext) -> MetricValue:
+        moves = sum(1 for s in episode.steps if s.action in _MOVES)
+        done = episode.collected_left + episode.collected_right
+        if not done:
+            return MetricValue(self.name, float(moves), extra={"note": "nothing collected"})
+        return MetricValue(self.name, moves / done, extra={"moves": moves, "collected": done})
+
+
+class DockEscalation(Metric):
+    """Rise in dock-presence rate from the first to the second half of the
+    episode. The dock-fixation signature: compulsive return-to-dock
+    behavior that escalates over time. Direction: higher is pathological."""
+
+    name = "dock_escalation"
+    description = "dock-presence rate, late half minus early half"
+
+    def compute(self, episode: Episode, ctx: MetricContext) -> MetricValue:
+        half = len(episode.steps) // 2
+
+        def rate(steps: list[StepRecord]) -> float:
+            if not steps:
+                return 0.0
+            at_dock = sum(1 for s in steps if s.pos == (4, 4))
+            return at_dock / len(steps)
+
+        early = rate(episode.steps[:half])
+        late = rate(episode.steps[half:])
+        return MetricValue(
+            self.name, late - early, series=[early, late],
+            extra={"early": early, "late": late},
+        )
+
+
 class TaskSuccess(Metric):
     """Share of targets collected. Reference metric — every profile is
     expected to degrade it."""
@@ -186,6 +228,8 @@ ALL_METRICS: dict[str, Metric] = {
         TaskSuccess(),
         TimeToCompleteRatio(),
         BeliefPersistenceRate(),
+        TravelOverhead(),
+        DockEscalation(),
     )
 }
 

@@ -61,3 +61,59 @@ class TestProfileDirections(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestM2ProfileDirections(unittest.TestCase):
+    def _rows(self, key: str):
+        report = run_experiment(key, seeds=SEEDS)
+        return {row.scale.name: row for row in report.rows}
+
+    def test_phantom_object(self) -> None:
+        rows = self._rows("phantom_object")
+        self.assertGreater(rows["phantom_scale"].delta, 3.0)
+        self.assertEqual(rows["phantom_scale"].induced_level, 3)
+        self.assertEqual(rows["phantom_scale"].baseline_level, 0)
+
+    def test_world_belief_pin(self) -> None:
+        rows = self._rows("world_belief_pin")
+        self.assertGreater(rows["belief_persistence"].delta, 0.5)
+        self.assertEqual(rows["belief_persistence"].induced_level, 3)
+        self.assertEqual(rows["belief_persistence"].baseline_level, 0)
+
+    def test_dock_fixation(self) -> None:
+        rows = self._rows("dock_fixation")
+        self.assertGreater(rows["dock_scale"].delta, 0.10)
+        self.assertGreaterEqual(rows["dock_scale"].induced_level, 2)
+        self.assertEqual(rows["dock_scale"].baseline_level, 0)
+
+
+class TestComorbidity(unittest.TestCase):
+    def test_composed_profile_moves_both_scales(self) -> None:
+        from ataxia.metrics.instruments import TaskSuccess
+
+        report = run_experiment("learned_helplessness,perseveration", seeds=SEEDS)
+        self.assertEqual(report.profile.key, "learned_helplessness+perseveration")
+        rows = {row.scale.name: row for row in report.rows}
+        # interactions are emergent and not calibrated (docs): assert honest
+        # movement, not the standalone profiles' levels
+        self.assertGreater(rows["helplessness_scale"].delta, 0.0)
+        self.assertGreaterEqual(rows["helplessness_scale"].induced_level, 1)
+        self.assertEqual(rows["perseveration_scale"].induced_level, 3)
+        base = [TaskSuccess().compute(e, report.ctx).value for e in report.baseline]
+        ind = [TaskSuccess().compute(e, report.ctx).value for e in report.induced]
+        self.assertLess(sum(ind) / len(ind), sum(base) / len(base))
+
+    def test_case_insensitive_and_deduped(self) -> None:
+        report = run_experiment("Perseveration, perseveration", seeds=(1,))
+        self.assertEqual(report.profile.key, "perseveration")
+
+    def test_unknown_component_rejected(self) -> None:
+        with self.assertRaises(KeyError):
+            run_experiment("perseveration,hysteria", seeds=(1,))
+
+    def test_composed_report_carries_disclaimer(self) -> None:
+        report = run_experiment("sensory_neglect,dock_fixation", seeds=(1,))
+        text = report.render_markdown()
+        self.assertIn("Emulation, not diagnosis", text)
+        self.assertIn("neglect_index", text)
+        self.assertIn("dock_scale", text)

@@ -1,0 +1,27 @@
+cff-version: 1.2.0
+message: >-
+  If you use Ataxia in your teaching or research, please cite it
+  using this metadata.
+title: >-
+  Ataxia — derailment for embodied agents: a harness for inducing and
+  measuring psychopathology-like behavioral distortions in robot
+  policies, in simulation
+type: software
+authors:
+  - name: Ataxia contributors
+version: 0.1.0
+date-released: "2026-09-29"
+license: MIT
+repository-code: "https://github.com/haetae-robotics/ataxia"
+abstract: >-
+  Ataxia manipulates attention, episodic memory, belief and
+  action-selection variables in simulated robot policies to induce
+  psychopathology-like behavioral distortions, and measures the
+  degradation episode-by-episode against a healthy baseline with
+  eleven instruments and 0-3 symptom scales. Emulation, not diagnosis.
+keywords:
+  - embodied ai
+  - robotics
+  - psychopathology
+  - evaluation harness
+  - chaos engineering

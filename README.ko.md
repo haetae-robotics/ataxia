@@ -15,6 +15,9 @@
 | 학습된 무기력 | 실패 후 행동 개시 붕괴 | initiative가 1/(1+k·실패수)로 감쇠 (params 레이어) |
 | 고착(perseveration) | 완료된 과업의 재실행 | 수집 직후 재수집 주입 (action 레이어) |
 | 편측 무시 | 공간의 한쪽이 체계적으로 무시됨 | 반시야 관측 마스크 (observation 레이어) |
+| 환상 객체 | 없는 것을 향해 행동함 | 관측 스트림에 빈 셀을 타겟으로 주입 |
+| 망상형 신념 유지 | 반증하는 센서에도 신념 유지 | decoy 셀을 타겟으로 고정, 증거 매 스텝 재덮음 |
+| 독 고착 | 강제적 복귀, 에스컬레이션 | 확률 상승형 독 방향 조종 (craving 유사) |
 
 모든 프로파일은 매핑 양쪽에 실재하는 구성 개념에 근거합니다: 학습된 무기력은 RL에서 실증된 현상이고, 고착(perseveration)은 로보틱스에서 이미 쓰이는 버그 분류명이며, 편측 무시는 기계적 동형이 완벽한 실재 신경학 증후군입니다.
 
@@ -29,13 +32,16 @@ ataxia demo --profile sensory_neglect
 
 `PseudoBot` — 9×9 격자(두 반시야에 3개씩 6개 타겟, 장애물, 신념 그리드 스크립트 정책)로 된 결정론적 stdlib 격자세계 — 가 기본 환경입니다. derailment의 PseudoModel과 같은 역할이라, 데모·테스트·캘리브레이션·CI에 시뮬레이터도 네트워크도 필요 없습니다.
 
-`ataxia tour` 실제 출력:
+`ataxia tour` 실제 출력 (6개 프로파일 전체):
 
 | Profile | Headline scale | Baseline | Induced | Δ | Level |
 |---|---|---|---|---|---|
+| dock_fixation | dock_scale | 0.00 | 0.25 | +0.25 | 2 — moderate |
 | learned_helplessness | helplessness_scale | 0.00 | 0.43 | +0.43 | 3 — marked |
 | perseveration | perseveration_scale | 0.00 | 0.50 | +0.50 | 3 — marked |
+| phantom_object | phantom_scale | 9.44 | 16.78 | +7.33 | 3 — marked |
 | sensory_neglect | neglect_index | -0.22 | 0.56 | +0.78 | 2 — moderate |
+| world_belief_pin | belief_persistence | 0.00 | 0.94 | +0.94 | 3 — marked |
 
 ## 동작 방식
 
@@ -55,12 +61,17 @@ ataxia demo --profile sensory_neglect
 | `learned_helplessness` | helplessness_scale (0→3) |
 | `perseveration` | perseveration_scale (0→3) |
 | `sensory_neglect` | neglect_index (0→2) |
+| `phantom_object` | phantom_scale (0→3) |
+| `world_belief_pin` | belief_persistence (0→3) |
+| `dock_fixation` | dock_scale (0→2) |
 
 ## 계측기
 
-에피소드 위의 순수 함수 9종: 개시 붕괴, 무진행률, 실패 수집률, 충돌 수, 행동 반복 엔트로피, 영역 감지 델타, 과업 성공률, 완료 시간 비율, 신념 고착률. 척도 임계값은 PseudoBot 기준으로 정규화되어 있으므로, 레벨은 참고용으로 보고 **자체 대조군 대비 델타**를 결과로 취하세요.
+에피소드 위의 순수 함수 11종: 개시 붕괴, 무진행률, 실패 수집률, 충돌 수, 행동 반복 엔트로피, 영역 감지 델타, 과업 성공률, 완료 시간 비율, 신념 고착률, 이동 오버헤드, 독 에스컬레이션. 척도 임계값은 PseudoBot 기준으로 정규화되어 있으므로, 레벨은 참고용으로 보고 **자체 대조군 대비 델타**를 결과로 취하세요.
 
 효과의 방향은 테스트 스위트가 프로파일마다 단언합니다 — 대조군 대비 지표를 움직이지 못하는 프로파일은 머지되지 않습니다.
+
+프로파일을 쉼표로 나열하면 **결합 체인**이 됩니다: `--profile learned_helplessness,perseveration`는 레이어 체인을 연결하고 척도를 합칩니다(상호작용은 자발적이며 보정되지 않음).
 
 ## 안전 모델 (요약; 전문은 ETHICS.md)
 
@@ -85,7 +96,7 @@ ataxia demo --profile sensory_neglect
 
 ## 로드맵
 
-- M2 — v0.2 프로파일: `phantom_object`, `world_belief_pin`, `dock_fixation`; 공병 체인; derailment 릴리스 바 수준의 문서
+- ~~M2 — v0.2 프로파일, 결합 체인, 문서~~ (완료)
 - M3 — 실시뮬레이터 어댑터 옵셔널 extra (`ataxia[mujoco]`, ROS 2 / Gazebo 어댑터 검토 중)
 - M4 — trusted publishing으로 PyPI 배포
 

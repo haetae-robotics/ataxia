@@ -116,12 +116,13 @@ tooling of any kind, adversarial *perception attack* generators (we edit
 internal state; we do not craft sensor-level attacks), and anything run
 unattended on hardware near people.
 
-## 6. Instruments (episode-level, nine)
+## 6. Instruments (episode-level, eleven after M2)
 
 Initiation collapse · no-progress rate · failed-collect rate (the
 perseveration signature: re-collecting a just-completed subtask) ·
 collision count · action repetition entropy · region detection delta ·
-task success · time-to-complete · belief persistence rate.
+task success · time-to-complete · belief persistence rate · travel
+overhead (the phantom-object signature) · dock escalation.
 
 Same reporting rules as derailment: thresholds normed against the offline
 reference (PseudoBot), healthy baseline at level 0, **delta vs. baseline is

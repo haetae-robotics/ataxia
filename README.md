@@ -1,5 +1,7 @@
 # Ataxia
 
+[![CI](https://github.com/haetae-robotics/ataxia/actions/workflows/ci.yml/badge.svg)](https://github.com/haetae-robotics/ataxia/actions/workflows/ci.yml)
+
 [**derailment**](https://github.com/ictechgy/derailment) for embodied
 agents — a harness that induces psychopathology-like behavioral distortions
 in robot policies, in simulation, and measures the degradation
@@ -26,6 +28,9 @@ and still fails in a characteristically *recognizable* way:
 | Learned helplessness | initiation collapses after failures | initiative decays as 1/(1+k·failures) (params layer) |
 | Perseveration | completed subtasks re-executed | post-collect re-collection injection (action layer) |
 | Hemispatial neglect | one side of space systematically unattended | hemifield observation mask (observation layer) |
+| Phantom object | acting toward things that are not there | empty cells injected as targets into the observation stream |
+| Delusion-like belief maintenance | belief held against contradicting sensors | a decoy cell pinned as target, evidence re-overridden |
+| Dock fixation | compulsive return, escalating | steering to the dock with rising probability (craving analog) |
 
 Every profile is grounded in a construct that exists on both sides of the
 mapping: learned helplessness is a real RL phenomenon, perseveration is
@@ -46,13 +51,16 @@ across the two hemifields, obstacles, a scripted belief-grid policy) — is
 the default environment, the ataxia analog of derailment's PseudoModel.
 Demos, tests, calibration and CI never need a simulator or a network.
 
-Real output from `ataxia tour`:
+Real output from `ataxia tour` (all six profiles):
 
 | Profile | Headline scale | Baseline | Induced | Δ | Level |
 |---|---|---|---|---|---|
+| dock_fixation | dock_scale | 0.00 | 0.25 | +0.25 | 2 — moderate |
 | learned_helplessness | helplessness_scale | 0.00 | 0.43 | +0.43 | 3 — marked |
 | perseveration | perseveration_scale | 0.00 | 0.50 | +0.50 | 3 — marked |
+| phantom_object | phantom_scale | 9.44 | 16.78 | +7.33 | 3 — marked |
 | sensory_neglect | neglect_index | -0.22 | 0.56 | +0.78 | 2 — moderate |
+| world_belief_pin | belief_persistence | 0.00 | 0.94 | +0.94 | 3 — marked |
 
 ## How it works
 
@@ -76,18 +84,25 @@ healthy baseline with identical seeds. Details in
 | `learned_helplessness` | helplessness_scale (0→3) |
 | `perseveration` | perseveration_scale (0→3) |
 | `sensory_neglect` | neglect_index (0→2) |
+| `phantom_object` | phantom_scale (0→3) |
+| `world_belief_pin` | belief_persistence (0→3) |
+| `dock_fixation` | dock_scale (0→2) |
 
 ## Instruments
 
-Nine episode-level metrics, pure functions over episodes: initiation
+Eleven episode-level metrics, pure functions over episodes: initiation
 collapse, no-progress rate, failed-collect rate, collision count,
 action-repetition entropy, region detection delta, task success,
-time-to-complete, belief persistence rate. Scale thresholds are normed
+time-to-complete, belief persistence rate, travel overhead, dock
+escalation. Scale thresholds are normed
 against PseudoBot; treat levels as indicative and the **delta vs. your own
 baseline** as the result.
 
 Direction of effect is asserted by the test suite on every profile — a
 profile that cannot move its metrics relative to baseline does not ship.
+Profiles compose into **combined chains** by listing them:
+`--profile learned_helplessness,perseveration` concatenates the layer
+chains and unions the scales (interactions are emergent, not calibrated).
 
 ## Safety model (short version; full text in ETHICS.md)
 
@@ -118,8 +133,7 @@ profile that cannot move its metrics relative to baseline does not ship.
 
 ## Roadmap
 
-- M2 — v0.2 profiles: `phantom_object`, `world_belief_pin`,
-  `dock_fixation`; comorbidity chains; docs to the derailment release bar
+- ~~M2 — v0.2 profiles, combined chains, docs~~ (done)
 - M3 — real-simulator adapter as an optional extra (`ataxia[mujoco]`,
   ROS 2 / Gazebo adapter under study)
 - M4 — PyPI release via trusted publishing

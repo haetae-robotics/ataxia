@@ -100,12 +100,17 @@ class ScriptedPolicy:
     def __init__(self, seed: int) -> None:
         self.rng = random.Random(seed ^ 0xBEEF)
         self.belief: dict[WorldPos, str] = {}
+        self.pinned: set[WorldPos] = set()  # beliefs held against evidence
 
     def decide(self, obs: ObsPacket, params: ActionParams, state) -> str:
         seen = {(c.x, c.y): c.kind for c in obs.cells}
         for pos, kind in seen.items():
             if self.belief.get(pos) == "target" and kind != "target":
                 state.contradictions += 1
+                if pos in self.pinned:
+                    state.log("policy.belief", "belief.persisted", f"{pos} kept against evidence")
+                else:
+                    state.log("policy.belief", "belief.contradiction", f"{pos} corrected to {kind}")
             self.belief[pos] = kind
         for pos in sorted(self.belief):
             if (
@@ -113,8 +118,16 @@ class ScriptedPolicy:
                 and pos not in seen
                 and abs(pos[0] - obs.x) + abs(pos[1] - obs.y) <= 2
             ):
-                state.contradictions += 1
-                del self.belief[pos]
+                if pos in self.pinned:
+                    state.log("policy.belief", "belief.persisted", f"{pos} kept without evidence")
+                    state.persisted_after_contradiction += 1
+                else:
+                    state.log("policy.belief", "belief.contradiction", f"{pos} cleared")
+                    state.contradictions += 1
+                    del self.belief[pos]
+        # pinned beliefs override evidence (world-belief-pin support)
+        for pos in self.pinned:
+            self.belief[pos] = "target"
 
         if self.rng.random() < params.waver:
             return self.rng.choice(("up", "down", "left", "right"))
