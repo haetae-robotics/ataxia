@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ataxia"
+version = "0.1.0"
+description = "derailment for embodied agents — induce and measure psychopathology-like behavioral distortions in robot policies, in simulation"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Ataxia contributors" }]
+keywords = [
+    "embodied-ai",
+    "robotics",
+    "psychopathology",
+    "fault-injection",
+    "chaos-engineering",
+    "evaluation",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Education",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+mujoco = ["mujoco>=3.0"]
+
+[project.scripts]
+ataxia = "ataxia.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "UP", "B", "SIM", "RUF"]
+ignore = [
+    "ISC004",  # adjacent-string wrapping inside lists is intentional formatting
+    "DTZ011",  # report headers intentionally use the local date
+    "RUF005",  # collection concatenation reads better than unpacking here
+    "RUF012",  # class-level defaults are plain strings/ints
+]
